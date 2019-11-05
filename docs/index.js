@@ -1,9 +1,13 @@
 import { GameWorld, utils, objects } from 'tweedee';
-import { Spaceship, Laser, Scoreboard, Astroid, Exercises } from './objects';
+import { Spaceship, Laser, Scoreboard, Astroid, Exercises, TouchButtons } from './objects';
+
+const isTouchDevice = () => {
+  return ('ontouchstart' in window) || window.TouchEvent || window.DocumentTouch && document instanceof DocumentTouch;
+};
 
 const keyCodeToDirectionMap = {
-  [utils.keyCodes.arrowup]: 0,
-  [utils.keyCodes.arrowdown]: 180,
+  [utils.keyCodes.arrowup]: 90,
+  [utils.keyCodes.arrowdown]: 270,
 };
 
 const world = new GameWorld('#container', {
@@ -20,14 +24,40 @@ const world = new GameWorld('#container', {
   enableCollisionDetection: true,
 });
 
-let _spaceship, _scoreboard, _exercises = null;
+let _spaceship, _scoreboard, _exercises, _touchButtons = null;
+
+const checkWhichButtonPressed = (e) => {
+  if (_spaceship && _touchButtons) {
+    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    const y = e.touches ? e.touches[0].clientY : e.clientY;
+
+    const touchPoint = new objects.GameObject(new objects.Point(x / world.scale, y / world.scale), new objects.Dimensions(10, 10));
+    
+    if (utils.isCollision(_touchButtons.upButtonDimensions, touchPoint)) {
+      handleArrowKeys(utils.keyCodes.arrowup, _spaceship);
+    }
+    if (utils.isCollision(_touchButtons.downButtonDimensions, touchPoint)) {
+      handleArrowKeys(utils.keyCodes.arrowdown, _spaceship);
+    }
+    if (utils.isCollision(_touchButtons.shootButtonDimensions, touchPoint)) {
+      handleShootLaser(utils.keyCodes.space, _spaceship);
+    }
+  }
+}
+
+world.on('touchstart', checkWhichButtonPressed);
+
+world.on('touchend', () => {
+  if (_spaceship) {
+    _spaceship.stop()
+  }
+});
 
 world.on('keydown', (keyCode) => {
   if (_spaceship) {
     handleArrowKeys(keyCode, _spaceship);
     handleShootLaser(keyCode, _spaceship);
   }
-  handleRestartGame(keyCode);
 });
 
 const handleArrowKeys = (keyCode, spaceship) => {
@@ -42,24 +72,20 @@ world.on('keyup', (keyCode) => {
 
 const handleShootLaser = (keyCode, spaceship) => {
   if (keyCode === utils.keyCodes.space) {
-    world.insert(new Laser((spaceship.x + (spaceship.width)), (spaceship.y + (spaceship.height / 2))));
+    world.insert(new Laser(new objects.Point((spaceship.point.x + (spaceship.dimensions.width)), (spaceship.point.y + (spaceship.dimensions.height / 2)))));
     world.getResource('shoot').play();
   }
 };
 
-const handleRestartGame = (keyCode) => {
-  if (keyCode === utils.keyCodes.enter && (world.isGameOver || !world.started)) {
-    startTheGame();
-  }
-};
-
 world.on('collisionDetected', ({ subject, target }) => {
-  const addExplosionTo = (x, y, cb) => {
-    const explosion = new objects.SpriteSheetImageObject(world.getResource('explosionspritesheet'), x, y, 142, 200);
+  const addExplosionTo = (point, cb) => {
+    const explosion = new objects.SpriteSheetObject(world.getResource('explosionspritesheet'), point, new objects.Dimensions(142, 200));
     explosion.frames = 8;
-    explosion.on('done', () => {
-      world.remove(explosion);
-      cb && cb();
+    explosion.on('afterUpdate', () => {
+      if (explosion.currentFrame >= explosion.frames) {
+        world.remove(explosion);
+        cb && cb();
+      }
     });
     world.insert(explosion);
   }
@@ -69,11 +95,11 @@ world.on('collisionDetected', ({ subject, target }) => {
     (subject instanceof Spaceship && target instanceof Laser)) {
       world.remove(subject);
       world.getResource('crash').play();
-      addExplosionTo(subject.x, subject.y, () => {
+      addExplosionTo(subject.point, () => {
         world.gameOver();
         world.showPopup({
           title: 'Game over!',
-          text: 'Druk op de "enter" toets om opnieuw te beginnen.',
+          buttons: [{ text: 'Opnieuw beginnen', onClick: startTheGame }],
         });
       });
   }
@@ -82,7 +108,7 @@ world.on('collisionDetected', ({ subject, target }) => {
     if (target.answer === _exercises.answer) {
       world.getResource('explosion').play();
       
-      addExplosionTo(target.x, target.y);
+      addExplosionTo(target.point);
       
       world.remove(target);
       world.remove(subject);
@@ -91,8 +117,8 @@ world.on('collisionDetected', ({ subject, target }) => {
       });
       _scoreboard.add(10);
     } else {
-      subject.move(270, (subject.speed * 1.5));
-      target.move(270, target.fullSpeed);
+      subject.move(180, (subject.speed * 1.3));
+      target.move(180, target.fullSpeed);
     }
   }
 });
@@ -102,18 +128,18 @@ world.on('afterGameLoop', () => {
   if (astroids.length === 0) {
     insertAstroids();
   } else {
-    astroids.filter(astroid => astroid.x < 0 - (astroid.width * 2)).forEach(astroid => world.remove(astroid));
+    astroids.filter(astroid => astroid.point.x < 0 - (astroid.dimensions.width * 2)).forEach(astroid => world.remove(astroid));
   }
-  world.gameObjects.filter(go => go instanceof Laser && (go.x + go.width) > world.width).forEach(laser => world.remove(laser));
+  world.gameObjects.filter(go => go instanceof Laser && (go.point.x + go.dimensions.width) > world.dimensions.width).forEach(laser => world.remove(laser));
 });
 
 const insertAstroids = () => {
-  const y = world.height / 3;
+  const y = world.dimensions.height / 3;
   _exercises.createNew();
   const answers = _exercises.getRandomAnswers();
-  const astroid1 = new Astroid(world.getResource('astroid1'),(world.width - utils.getRandomInt(130, 170)), ((y * 1) / 2) - 75, answers[0]);
-  const astroid2 = new Astroid(world.getResource('astroid1'), (world.width - utils.getRandomInt(130, 170)), ((y * 2) / 2), answers[1]);
-  const astroid3 = new Astroid(world.getResource('astroid1'), (world.width - utils.getRandomInt(130, 170)), ((y * 3) / 2) + 75, answers[2]);
+  const astroid1 = new Astroid(world.getResource('astroid1'), new objects.Point((world.dimensions.width - utils.getRandomInt(130, 170)), ((y * 1) / 2) - 75), answers[0]);
+  const astroid2 = new Astroid(world.getResource('astroid1'), new objects.Point((world.dimensions.width - utils.getRandomInt(130, 170)), ((y * 2) / 2)), answers[1]);
+  const astroid3 = new Astroid(world.getResource('astroid1'), new objects.Point((world.dimensions.width - utils.getRandomInt(130, 170)), ((y * 3) / 2) + 75), answers[2]);
 
   world.insert(astroid1);
   world.insert(astroid2);
@@ -121,31 +147,41 @@ const insertAstroids = () => {
 }
 
 const startTheGame = () => {
-  const spaceship = new Spaceship(world.getResource('spaceship'), 100, (world.height / 2));
-  spaceship.setBoundaries(40, world.width, world.height - 120, 0);
+  const spaceship = new Spaceship(world.getResource('spaceship'), new objects.Point(100, (world.dimensions.height / 2)));
+  spaceship.setBoundaries(40, world.dimensions.width, world.dimensions.height - 120, 0);
   
-  const background = new objects.Background(world.getResource('background'), world.width, world.height);
-  const scoreboard = new Scoreboard(world.getResource('dashboard'), 0, world.height - 120);
+  const background = new objects.Background(world.getResource('background'), world.dimensions);
+  const scoreboard = new Scoreboard(world.getResource('dashboard'), new objects.Point(0, world.dimensions.height - 120));
   const exercises = new Exercises();
-  
   _scoreboard = scoreboard;
   _spaceship = spaceship;
   _exercises = exercises;
-
+  
   world.closePopup();
   world.reset();
   world.insert(background);
   world.insert(scoreboard);
   world.insert(exercises);
   world.insert(spaceship);
+
+  if (isTouchDevice()) {
+    const touchButtons = new TouchButtons(world.dimensions);
+    _touchButtons = touchButtons;
+    world.insert(touchButtons);
+  }
+
   world.start();
 };
 
 world.showPopup({
   title: 'Klaar om te beginnen?',
-  text: [ 'Druk dan op de "enter" toets. <br /><br />',
-          'Gebruik de pijltjes toetsen om je ruimteschip te besturen en de spatiebalk om een rots te schieten<br /><br />',
-          'Dit spel is gemaakt door: <br />',
-          'Ronald van der Kooij & Thijs van der Kooij'
-        ].join(' '),
+  text: [ (isTouchDevice()) ?
+          'Gebruik de pijlen om je ruimteschip te besturen en de rode knop om op een rots te schieten' :
+          'Gebruik de pijltjes toetsen om je ruimteschip te besturen en de spatiebalk om een rots te schieten',
+          '',
+        ].join('<br /><br />'),
+  buttons: [{ text: 'Start', onClick: startTheGame }],
 });
+
+
+

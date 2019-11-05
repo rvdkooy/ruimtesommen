@@ -1,49 +1,57 @@
-import { objects, mixins, utils } from 'tweedee';
+import { objects, mixins, utils, behaviours } from 'tweedee';
 
 export class Laser extends objects.GameObject {
-  constructor(x, y) {
-    super(x, y, 20, 5);
-    mixins.addMovement.bind(this)();
+  constructor(point) {
+    super(point, new objects.Dimensions(20, 5), [behaviours.movement, behaviours.collisions]);
     this.updaters.push(this.drawLaser.bind(this));
-    this.move(90, 15);
+    this.move(0, 15);
   }
 
   drawLaser(world) {
     world.ctx.beginPath();
-    world.ctx.moveTo(world.scaler(this.x), world.scaler(this.y));
-    world.ctx.lineTo(world.scaler(this.x) + this.width, world.scaler(this.y));
+    world.ctx.moveTo(world.scaler(this.point.x), world.scaler(this.point.y));
+    world.ctx.lineTo(world.scaler(this.point.x) + this.dimensions.width, world.scaler(this.point.y));
     world.ctx.strokeStyle = "#FF0000";
-    world.ctx.lineWidth = this.height;
+    world.ctx.lineWidth = this.dimensions.height;
     world.ctx.stroke(); 
   }
 }
 
-export class Astroid extends objects.ImageObject {
-  constructor(image, x, y, answer) {
-    super(image, x, y);
+export class Astroid extends objects.GameObject {
+  constructor(image, point, answer) {
+    super(point, new objects.Dimensions(image.width, image.height), [
+      behaviours.createImageBehaviour(image),
+      behaviours.movement,
+      behaviours.collisions
+    ]);
     this.answer = answer;
-    mixins.addMovement.bind(this)();
     this.updaters.push(this.drawAnswer.bind(this));
-    this.move(270, 1);
-    this.fullSpeed = 3;
+    this.fullSpeed = 5;
+    this.move(180, 2);
   }
 
   drawAnswer(world) {
     world.ctx.font = `${world.scaler(40)}px Arial`;
     world.ctx.fillStyle = 'white';
-    world.ctx.fillText(this.answer, world.scaler(this.x + 50), world.scaler(this.y + 85));
+    world.ctx.fillText(this.answer, world.scaler(this.point.x + 50), world.scaler(this.point.y + 85));
   }
 }
 
-export class Spaceship extends objects.ImageObject {
-  constructor(image, width, height, x, y) {
-    super(image, width, height, x, y);
+export class Spaceship extends objects.GameObject {
+  constructor(image, point) {
+    super(point, new objects.Dimensions(image.width, image.height), [
+      behaviours.createImageBehaviour(image),
+      behaviours.movement,
+      behaviours.collisions
+    ]);
   }
 }
 
-export class Scoreboard extends objects.ImageObject {
-  constructor(image, width, height, x, y) {
-    super(image, width, height, x, y);
+export class Scoreboard extends objects.GameObject {
+  constructor(image, point) {
+    super(point, objects.Dimensions.none(), [
+      behaviours.createImageBehaviour(image),
+    ]);
     this.updaters.push(this.drawScoreboard.bind(this));
     this.score = 0;
   }
@@ -57,19 +65,81 @@ export class Scoreboard extends objects.ImageObject {
     world.ctx.font = `${world.scaler(30)}px Arial`;
     world.ctx.fillStyle = 'white';
     world.ctx.textAlign = "left"; 
-    
     world.ctx.fillText('Score:  ' + this.score, world.scaler(20), world.scaler(30));
+    world.ctx.restore();
+  }
+}
 
-    // world.ctx.fillText('Levens:', world.scaler(120), world.scaler(world.height - 45));
-    // world.ctx.fillText("1", world.scaler(350), world.scaler(world.height - 45));
+export class TouchButtons extends objects.GameObject {
+  constructor(worldDimensions) {
+    super(objects.Point.none());
+    this.upButtonDimensions = new objects.GameObject(new objects.Point(20, worldDimensions.height - 160), new objects.Dimensions(80, 50));
+    this.downButtonDimensions = new objects.GameObject(new objects.Point(20, worldDimensions.height - 80), new objects.Dimensions(80, 50));
+    this.shootButtonDimensions = new objects.GameObject(
+      new objects.Point(worldDimensions.width - 120, worldDimensions.height - 140),
+      new objects.Dimensions(70, 70),
+    );
+    this.updaters.push(this.updateTouchButtons.bind(this));
+  }
 
+  updateUpButton(world) {
+    world.ctx.fillStyle = 'grey';
+    world.ctx.strokeStyle = "black";
+    world.ctx.lineWidth = 3;
+    world.ctx.beginPath();
+
+    const { point, dimensions } = this.upButtonDimensions;
+    world.ctx.moveTo(world.scaler(point.x + dimensions.width / 2), world.scaler(point.y));
+    world.ctx.lineTo(world.scaler(point.x + dimensions.width), world.scaler(point.y + dimensions.height));
+    world.ctx.lineTo(world.scaler(point.x), world.scaler(point.y + dimensions.height));
+    world.ctx.lineTo(world.scaler(point.x + dimensions.width / 2), world.scaler(point.y));
+    world.ctx.stroke();
+    world.ctx.fill();
+  }
+
+  updateDownButton(world) {
+    world.ctx.fillStyle = 'grey';
+    world.ctx.strokeStyle = "black";
+    world.ctx.lineWidth = 3;
+    world.ctx.beginPath();
+
+    const { point, dimensions } = this.downButtonDimensions;
+    world.ctx.moveTo(world.scaler(point.x), world.scaler(point.y));
+    world.ctx.lineTo(world.scaler(point.x + dimensions.width), world.scaler(point.y));
+    world.ctx.lineTo(world.scaler(point.x + (dimensions.width / 2)), world.scaler(point.y + dimensions.height));
+    world.ctx.lineTo(world.scaler(point.x), world.scaler(point.y));
+    world.ctx.stroke();
+    world.ctx.fill();
+  }
+
+  updateShootButton(world) {
+    world.ctx.fillStyle = '#991a00';
+    world.ctx.strokeStyle = "black";
+    world.ctx.lineWidth = 3;
+    world.ctx.beginPath();
+
+    const { point, dimensions } = this.shootButtonDimensions;
+    world.ctx.arc(
+      world.scaler(point.x + (dimensions.width / 2)),
+      world.scaler(point.y + (dimensions.height / 2)),
+      world.scaler(dimensions.width / 2), 0, Math.PI * 2, true
+    );
+    world.ctx.stroke();
+    world.ctx.fill();
+  }
+
+  updateTouchButtons(world) {
+    world.ctx.save();
+    this.updateUpButton(world);
+    this.updateDownButton(world);
+    this.updateShootButton(world);
     world.ctx.restore();
   }
 }
 
 export class Exercises extends objects.GameObject {
-  constructor(x, y) {
-    super (x, y);
+  constructor(point) {
+    super (point);
     this.updaters.push(this.updateExercise.bind(this));
     this.text = "";
     this.answer = null;
@@ -105,8 +175,8 @@ export class Exercises extends objects.GameObject {
     world.ctx.font = `${world.scaler(60)}px Arial`;
     world.ctx.fillStyle = 'white';
     world.ctx.textAlign = "center"; 
-    world.ctx.fillText('Som:', world.scaler(280), world.scaler(world.height - 40));
-    world.ctx.fillText(this.text, world.scaler(510), world.scaler(world.height - 40));
+    world.ctx.fillText('Som:', world.scaler(280), world.scaler(world.dimensions.height - 40));
+    world.ctx.fillText(this.text, world.scaler(510), world.scaler(world.dimensions.height - 40));
     world.ctx.restore();
   }
 }

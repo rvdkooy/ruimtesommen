@@ -8,5 +8,5 @@ module.exports = {
   },
   target: 'web',
   context: __dirname,
-  devtool: 'inline-source-map',
+  devtool: 'source-map',
 }

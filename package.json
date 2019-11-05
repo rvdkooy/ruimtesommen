@@ -22,6 +22,6 @@
     "webpack-cli": "^3.3.3"
   },
   "dependencies": {
-    "tweedee": "0.0.2"
+    "tweedee": "0.0.5"
   }
 }
