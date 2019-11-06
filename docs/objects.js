@@ -71,13 +71,17 @@ export class Scoreboard extends objects.GameObject {
 }
 
 export class TouchButtons extends objects.GameObject {
-  constructor(worldDimensions) {
+  constructor(world) {
     super(objects.Point.none());
-    this.upButtonDimensions = new objects.GameObject(new objects.Point(20, worldDimensions.height - 160), new objects.Dimensions(80, 50));
-    this.downButtonDimensions = new objects.GameObject(new objects.Point(20, worldDimensions.height - 80), new objects.Dimensions(80, 50));
+    this.upButtonDimensions = new objects.GameObject(
+      new objects.Point(world.scaler(20), world.scaler(world.dimensions.height - 160)),
+      new objects.Dimensions(world.scaler(80), world.scaler(50)));
+    this.downButtonDimensions = new objects.GameObject(
+      new objects.Point(world.scaler(20), world.scaler(world.dimensions.height - 80)),
+      new objects.Dimensions(world.scaler(80), world.scaler(50)));
     this.shootButtonDimensions = new objects.GameObject(
-      new objects.Point(worldDimensions.width - 120, worldDimensions.height - 140),
-      new objects.Dimensions(70, 70),
+      new objects.Point(world.scaler(world.dimensions.width - 120), world.scaler(world.dimensions.height - 140)),
+      new objects.Dimensions(world.scaler(70), world.scaler(70)),
     );
     this.updaters.push(this.updateTouchButtons.bind(this));
   }
@@ -89,10 +93,10 @@ export class TouchButtons extends objects.GameObject {
     world.ctx.beginPath();
 
     const { point, dimensions } = this.upButtonDimensions;
-    world.ctx.moveTo(world.scaler(point.x + dimensions.width / 2), world.scaler(point.y));
-    world.ctx.lineTo(world.scaler(point.x + dimensions.width), world.scaler(point.y + dimensions.height));
-    world.ctx.lineTo(world.scaler(point.x), world.scaler(point.y + dimensions.height));
-    world.ctx.lineTo(world.scaler(point.x + dimensions.width / 2), world.scaler(point.y));
+    world.ctx.moveTo(point.x + dimensions.width / 2, point.y);
+    world.ctx.lineTo(point.x + dimensions.width, point.y + dimensions.height);
+    world.ctx.lineTo(point.x, point.y + dimensions.height);
+    world.ctx.lineTo(point.x + dimensions.width / 2, point.y);
     world.ctx.stroke();
     world.ctx.fill();
   }
@@ -104,10 +108,10 @@ export class TouchButtons extends objects.GameObject {
     world.ctx.beginPath();
 
     const { point, dimensions } = this.downButtonDimensions;
-    world.ctx.moveTo(world.scaler(point.x), world.scaler(point.y));
-    world.ctx.lineTo(world.scaler(point.x + dimensions.width), world.scaler(point.y));
-    world.ctx.lineTo(world.scaler(point.x + (dimensions.width / 2)), world.scaler(point.y + dimensions.height));
-    world.ctx.lineTo(world.scaler(point.x), world.scaler(point.y));
+    world.ctx.moveTo(point.x, point.y);
+    world.ctx.lineTo(point.x + dimensions.width, point.y);
+    world.ctx.lineTo(point.x + (dimensions.width / 2), point.y + dimensions.height);
+    world.ctx.lineTo(point.x, point.y);
     world.ctx.stroke();
     world.ctx.fill();
   }
@@ -120,9 +124,9 @@ export class TouchButtons extends objects.GameObject {
 
     const { point, dimensions } = this.shootButtonDimensions;
     world.ctx.arc(
-      world.scaler(point.x + (dimensions.width / 2)),
-      world.scaler(point.y + (dimensions.height / 2)),
-      world.scaler(dimensions.width / 2), 0, Math.PI * 2, true
+      point.x + (dimensions.width / 2),
+      point.y + (dimensions.height / 2),
+      dimensions.width / 2, 0, Math.PI * 2, true
     );
     world.ctx.stroke();
     world.ctx.fill();

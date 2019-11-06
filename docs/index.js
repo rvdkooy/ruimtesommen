@@ -26,14 +26,30 @@ const world = new GameWorld('#container', {
 
 let _spaceship, _scoreboard, _exercises, _touchButtons = null;
 
-const checkWhichButtonPressed = (e) => {
-  console.log(e);
-  if (_spaceship && _touchButtons) {
-    const x = e.touches ? e.touches[0].clientX : e.clientX;
-    const y = e.touches ? e.touches[0].clientY : e.clientY;
+function getMousePos(canvasDom, mouseEvent) {
+  var rect = canvasDom.getBoundingClientRect();
+  return {
+    x: mouseEvent.touches[0].clientX - rect.left,
+    y: mouseEvent.touches[0].clientY - rect.top
+  };
+}
 
-    const touchPoint = new objects.GameObject(new objects.Point(x / world.scale, y / world.scale), new objects.Dimensions(10, 10));
+const checkWhichButtonPressed = (e) => {
+  if (_spaceship && _touchButtons) {
+    const coords =  getMousePos(world.canvas, e);
     
+    const touchPoint = new objects.GameObject(new objects.Point(coords.x, coords.y), new objects.Dimensions(10, 10));
+    // touchPoint.updaters.push((world)=> {
+    //   var pointSize = 3; // Change according to the size of the point.
+      
+    //   world.ctx.fillStyle = "#ff2626"; // Red color
+    //   world.ctx.beginPath(); //Start path
+    //   world.ctx.arc(coords.x, coords.y, pointSize, 0, Math.PI * 2, true); // Draw a point using the arc function of the canvas with a point structure.
+    //   world.ctx.fill(); // Close the path and fill.
+    // })
+
+    // world.insert(touchPoint)
+
     if (utils.isCollision(_touchButtons.upButtonDimensions, touchPoint)) {
       handleArrowKeys(utils.keyCodes.arrowup, _spaceship);
     }
@@ -166,7 +182,7 @@ const startTheGame = () => {
   world.insert(spaceship);
 
   if (isTouchDevice()) {
-    const touchButtons = new TouchButtons(world.dimensions);
+    const touchButtons = new TouchButtons(world);
     _touchButtons = touchButtons;
     world.insert(touchButtons);
   }
@@ -179,6 +195,7 @@ world.showPopup({
   text: [ (isTouchDevice()) ?
           'Gebruik de pijlen om je ruimteschip te besturen en de rode knop om op een rots te schieten' :
           'Gebruik de pijltjes toetsen om je ruimteschip te besturen en de spatiebalk om een rots te schieten',
+          'Deze game is gemaakt door Ronald en Thijs van der Kooij ☺',
           '',
         ].join('<br /><br />'),
   buttons: [{ text: 'Start', onClick: startTheGame }],
