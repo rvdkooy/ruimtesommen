@@ -27,6 +27,7 @@ const world = new GameWorld('#container', {
 let _spaceship, _scoreboard, _exercises, _touchButtons = null;
 
 const checkWhichButtonPressed = (e) => {
+  console.log(e);
   if (_spaceship && _touchButtons) {
     const x = e.touches ? e.touches[0].clientX : e.clientX;
     const y = e.touches ? e.touches[0].clientY : e.clientY;
